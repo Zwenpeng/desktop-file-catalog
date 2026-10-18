@@ -1,0 +1,18 @@
+# Build output and local scan history
+**/bin/
+**/obj/
+**/Data/
+artifacts/
+
+# Local IDE and operating-system files
+.vs/
+.vscode/
+*.user
+*.suo
+Desktop.ini
+Thumbs.db
+
+# Locally generated exports and test data
+*.csv
+*.json.gz
+*.log
