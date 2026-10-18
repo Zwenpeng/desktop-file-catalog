@@ -47,7 +47,8 @@ public static class ExportService
             $"<tr><td>{WebUtility.HtmlEncode(item.Name)}</td><td>{item.Count:N0}</td><td>{FileRecord.FormatBytes(item.Bytes)}</td></tr>"));
         var duplicateText = duplicates is null
             ? "尚未执行精确查重"
-            : $"{duplicates.GroupCount:N0} 组、{duplicates.FileCount:N0} 个文件，理论冗余 {FileRecord.FormatBytes(duplicates.RedundantBytes)}";
+            : $"{duplicates.GroupCount:N0} 组、{duplicates.FileCount:N0} 个文件，理论冗余 {FileRecord.FormatBytes(duplicates.RedundantBytes)}" +
+              (duplicates.ErrorCount > 0 ? $"；{duplicates.ErrorCount:N0} 个候选文件未能核对，结果不完整" : string.Empty);
         var historyText = history switch
         {
             { IsIncomplete: true } => "本次扫描有读取错误，历史未更新，无法判断文件是否移除",

@@ -35,6 +35,10 @@ public sealed class DuplicateService
             try
             {
                 var info = new FileInfo(file.FullPath);
+                // A regular file may have been replaced by a link after the scan.
+                if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                    throw new IOException("File became a link after the scan.");
+
                 var scannedModifiedUtc = file.Modified.ToUniversalTime();
                 if (info.Length != file.Length || info.LastWriteTimeUtc != scannedModifiedUtc)
                     throw new IOException("File changed since the scan.");
@@ -49,7 +53,8 @@ public sealed class DuplicateService
                 var hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken));
 
                 info.Refresh();
-                if (info.Length != file.Length || info.LastWriteTimeUtc != scannedModifiedUtc)
+                if (info.Attributes.HasFlag(FileAttributes.ReparsePoint) ||
+                    info.Length != file.Length || info.LastWriteTimeUtc != scannedModifiedUtc)
                     throw new IOException("File changed during duplicate checking.");
 
                 var key = (file.Length, hash);

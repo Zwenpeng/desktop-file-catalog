@@ -39,6 +39,25 @@ try
     var staleResult = await new DuplicateService().ComputeAsync(staleScan.Files, progress: null, CancellationToken.None);
     Assert(staleResult.GroupCount == 0 && staleResult.ErrorCount > 0,
         "文件在扫描后变化时不应报告为精确重复");
+
+    var linkRoot = Path.Combine(staleRoot, "链接边界验证");
+    Directory.CreateDirectory(linkRoot);
+    var linkPath = Path.Combine(linkRoot, "link.txt");
+    if (TryCreateFileLink(linkPath, Path.Combine(staleRoot, "Y.txt")))
+    {
+        var linkScan = await scanner.ScanAsync(linkRoot, progress: null, CancellationToken.None);
+        Assert(linkScan.Files.Count == 0 && linkScan.SkippedReparsePoints == 1,
+            "扫描应跳过文件符号链接，避免读取范围外的目标");
+
+        File.Delete(Path.Combine(staleRoot, "X.txt"));
+        if (TryCreateFileLink(Path.Combine(staleRoot, "X.txt"), Path.Combine(staleRoot, "Y.txt")))
+        {
+            var replacedResult = await new DuplicateService().ComputeAsync(staleScan.Files, progress: null, CancellationToken.None);
+            Assert(replacedResult.GroupCount == 0 && replacedResult.ErrorCount > 0,
+                "扫描后被替换为链接的文件不应参与查重");
+            Console.WriteLine("PASS 文件符号链接：扫描跳过，扫描后替换不参与查重");
+        }
+    }
     Directory.Delete(staleRoot, recursive: true);
 
     await File.WriteAllTextAsync(Path.Combine(root, "C.md"), "first-but-now-longer", Encoding.UTF8);
@@ -60,9 +79,15 @@ try
     var csvText = await File.ReadAllTextAsync(csv);
     var htmlText = await File.ReadAllTextAsync(html);
     Assert(csvText.Contains(root, StringComparison.OrdinalIgnoreCase), "完整 CSV 应包含完整路径");
+    Assert((await File.ReadAllLinesAsync(csv)).Length == second.Files.Count + 1,
+        "完整 CSV 应包含全部扫描记录和一行表头");
     Assert(!htmlText.Contains(root, StringComparison.OrdinalIgnoreCase), "分享摘要不应包含扫描根路径");
     Assert(!htmlText.Contains("A.txt", StringComparison.Ordinal), "分享摘要不应包含逐文件名称");
     Assert(htmlText.Contains("分享安全版不包含完整文件路径", StringComparison.Ordinal), "分享摘要应包含隐私说明");
+    var incompleteHtml = Path.Combine(root, "share-incomplete.html");
+    await ExportService.ExportShareHtmlAsync(incompleteHtml, second, staleResult, secondHistory, CancellationToken.None);
+    Assert((await File.ReadAllTextAsync(incompleteHtml)).Contains("候选文件未能核对，结果不完整", StringComparison.Ordinal),
+        "查重不完整时分享摘要应提示读取错误");
 
     Console.WriteLine("PASS 扫描：4 个文件、2 个目录");
     Console.WriteLine("PASS 查重：1 组、2 个完全相同文件");
@@ -77,4 +102,18 @@ finally
 static void Assert(bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
+}
+
+static bool TryCreateFileLink(string linkPath, string targetPath)
+{
+    try
+    {
+        File.CreateSymbolicLink(linkPath, targetPath);
+        return true;
+    }
+    catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+    {
+        Console.WriteLine($"SKIP 文件符号链接验证：当前环境不允许创建链接（{ex.GetType().Name}）");
+        return false;
+    }
 }

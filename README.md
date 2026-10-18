@@ -6,7 +6,7 @@ A local Windows file catalog for finding files, reviewing exact-content duplicat
 
 ## Download and run
 
-1. Download `DesktopFileCatalog-v1.0.0-win-x64.zip` from the [latest release](https://github.com/Zwenpeng/desktop-file-catalog/releases/latest).
+1. Download `DesktopFileCatalog-v1.0.1-win-x64.zip` from the [latest release](https://github.com/Zwenpeng/desktop-file-catalog/releases/latest).
 2. Extract the ZIP into a folder where you can save files, such as your Downloads or Documents folder. Do not run the EXE inside the ZIP.
 3. Double-click `桌面文件管家.exe`. Choose any folder and select **开始扫描** (Start scan).
 
@@ -16,10 +16,10 @@ The release is a self-contained Windows x64 build: no .NET SDK or runtime instal
 
 - Browse file names, relative paths, extensions, categories, sizes, and modification times in a searchable table.
 - Search multiple words together; filter by category or duplicate status and hide common dependency/cache paths.
-- Run exact-content duplicate detection on demand: group same-size candidates, then calculate SHA-256 hashes. The displayed redundant size is theoretical, not a deletion recommendation.
+- Run exact-content duplicate detection on demand: group same-size candidates, then calculate SHA-256 hashes. The displayed redundant size is theoretical, not a deletion recommendation; unreadable candidates are reported as an incomplete result.
 - Compare complete scans of the same folder to count added, modified, and removed files. If a scan has read errors, history is not updated and removal counts are not reported.
-- Export a full CSV for personal analysis, or a smaller HTML summary for sharing.
-- Skip child directory junctions and other reparse points so a linked directory is not repeatedly traversed.
+- Export a full CSV of every scanned file, regardless of the current search or filters, for personal analysis; or a smaller HTML summary for sharing.
+- Skip file symbolic links and child directory junctions/other reparse points to avoid reading linked targets elsewhere or repeatedly traversing directories.
 - Cancel long-running scans and duplicate checks.
 
 ## Privacy and local data
@@ -35,7 +35,7 @@ The **完整 CSV** (full CSV) contains absolute paths and file names. The **分�
 - Searches names and paths, not the text inside documents.
 - Reports logical file sizes, not physical space recovered by deleting a file. Hard links, sparse files, and cloud placeholders can make these differ.
 - Detects exact-content candidates, not visually similar photos or near-duplicate documents.
-- The change history compares relative path, size, and modification time; it is not a content-versioning system or a backup.
+- The change history compares relative path, size, and modification time. "Removed" means absent from the next complete scan, not necessarily physically deleted; it is not a content-versioning system or a backup.
 - A large scan stores its file list in memory. Some protected folders cannot be read without additional permissions; the app reports those boundaries.
 - This is a portable app. If you place the EXE in a protected folder such as `Program Files`, it may be unable to save its local history.
 

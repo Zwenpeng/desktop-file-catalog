@@ -36,7 +36,7 @@ public partial class MainWindow : Window
         CategoryFilter.SelectedIndex = 0;
         DuplicateFilter.ItemsSource = new[] { "全部状态", "内容完全相同", "未标记重复" };
         DuplicateFilter.SelectedIndex = 0;
-        SearchBox.ToolTip = "输入多个关键词时需全部匹配，例如：结直肠癌 PPT";
+        SearchBox.ToolTip = "输入多个关键词时需全部匹配，例如：课程 报告";
         Keyboard.Focus(PathBox);
     }
 
@@ -83,7 +83,7 @@ public partial class MainWindow : Window
             UpdateSummary();
             StatusText.Text = $"扫描完成：{_scanResult.Files.Count:N0} 个文件；只读取了名称、路径、大小和时间等元数据。";
             if (_scanResult.SkippedReparsePoints > 0)
-                StatusText.Text += $" 已跳过 {_scanResult.SkippedReparsePoints:N0} 个联接/重解析目录，避免循环计数。";
+                StatusText.Text += $" 已跳过 {_scanResult.SkippedReparsePoints:N0} 个文件或目录联接/重解析点。";
         }
         catch (OperationCanceledException)
         {
@@ -127,6 +127,8 @@ public partial class MainWindow : Window
             _view?.Refresh();
             UpdateSummary();
             StatusText.Text = $"查重完成：{_duplicateResult.GroupCount:N0} 组、{_duplicateResult.FileCount:N0} 个内容完全相同的文件。理论冗余不是删除建议。";
+            if (_duplicateResult.ErrorCount > 0)
+                StatusText.Text += $" 有 {_duplicateResult.ErrorCount:N0} 个候选文件未能核对，结果不完整。";
         }
         catch (OperationCanceledException)
         {
@@ -258,7 +260,7 @@ public partial class MainWindow : Window
 
     private async void ExportCsvButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_scanResult is null || _view is null) return;
+        if (_scanResult is null) return;
         var dialog = new SaveFileDialog
         {
             Title = "导出完整文件清单",
@@ -269,9 +271,8 @@ public partial class MainWindow : Window
 
         try
         {
-            var visible = _view.Cast<FileRecord>().ToList();
-            await ExportService.ExportCsvAsync(dialog.FileName, visible, CancellationToken.None);
-            StatusText.Text = $"已导出 {visible.Count:N0} 条记录：{dialog.FileName}";
+            await ExportService.ExportCsvAsync(dialog.FileName, _scanResult.Files, CancellationToken.None);
+            StatusText.Text = $"已导出全部 {_scanResult.Files.Count:N0} 条扫描记录：{dialog.FileName}";
         }
         catch (Exception ex)
         {
@@ -306,7 +307,7 @@ public partial class MainWindow : Window
         if (_scanResult is null) return;
         var lines = new List<string>
         {
-            $"跳过的联接/重解析目录：{_scanResult.SkippedReparsePoints:N0}",
+            $"跳过的文件或目录联接/重解析点：{_scanResult.SkippedReparsePoints:N0}",
             $"无法读取的路径：{_scanResult.Errors.Count:N0}",
             "",
             "这些路径没有计入结果；应用没有尝试修改权限。"
@@ -368,7 +369,7 @@ public partial class MainWindow : Window
                             "2. “精确查重”会读取候选文件内容并计算 SHA-256，但不会删除或修改文件。\n\n" +
                             "3. “完整 CSV”含本机完整路径，只适合自己分析；“分享摘要”不含逐文件清单和完整路径，更适合发给他人。\n\n" +
                             "4. 每次扫描会在应用旁的 Data 文件夹保存压缩历史快照，用于比较新增、修改和移除。最多保留同一目录的 10 次记录。\n\n" +
-                            "5. 应用主动跳过目录联接/重解析点，避免循环扫描和重复计数。";
+                            "5. 应用主动跳过文件和目录联接/重解析点，避免超出所选目录的扫描范围或重复计数。";
         MessageBox.Show(this, text, "使用说明", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 

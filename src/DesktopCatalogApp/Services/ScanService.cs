@@ -40,6 +40,13 @@ public sealed class ScanService
                     cancellationToken.ThrowIfCancellationRequested();
                     try
                     {
+                        // File links can point outside the selected root, just like directory links.
+                        if (File.GetAttributes(filePath).HasFlag(FileAttributes.ReparsePoint))
+                        {
+                            skippedReparsePoints++;
+                            continue;
+                        }
+
                         var info = new FileInfo(filePath);
                         var relative = Path.GetRelativePath(root, info.FullName);
                         var relativeDirectory = Path.GetDirectoryName(relative) ?? string.Empty;
